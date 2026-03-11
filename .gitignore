@@ -1,0 +1,6 @@
+.venv
+.vscode
+__pycache__
+*.pyc
+test.jpg
+commercial_cinematic.mp4
