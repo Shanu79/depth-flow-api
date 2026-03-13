@@ -31,7 +31,7 @@ def main():
         
         # --- 2. Motion Trajectory Settings ---
         "motion": {
-            "style": "dolly_zoom",   # [Required] | Options: 'orbit', 'dolly', 'zoom', 'horizontal', 'vertical', 'circle', 'dolly_zoom'
+            "style": "dolly",   # [Required] | Options: 'orbit', 'dolly', 'zoom', 'horizontal', 'vertical', 'circle', 'dolly_zoom'
             "amplitude": 1.5,        # [Optional, Default: 0.8] | Range: 0.0 to 10.0 (Movement intensity)
             "speed": 1.5,            # [Optional, Default: 1.0] | Range: > 0.0 (Global animation speed multiplier)
             "reverse": False,        # [Optional, Default: False] | Options: True, False (Play backwards)
