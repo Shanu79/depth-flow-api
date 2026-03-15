@@ -70,6 +70,7 @@ Perfect for general use, social media generators, or web animations. It override
     "focus": 0.5
   }
 }
+```
 
 ### The "Advanced" Payload (Cinematic & Professional)
 Designed for high-end applications. It pushes render quality to the maximum, applies a custom color grade, activates high-quality Depth of Field (Bokeh), and executes complex camera movements like the Vertigo effect (dolly_zoom).
@@ -109,8 +110,9 @@ Designed for high-end applications. It pushes render quality to the maximum, app
     "color_sepia": 10.0
   }
 }
+```
 
-☁️ Cloud CPU Deployment: Next Steps
+### ☁️ Cloud CPU Deployment: Next Steps
 While this engine is optimized for GPU, it is fully compatible with Cloud CPU environments (like AWS EC2, DigitalOcean, or Google Cloud) using Software Rendering.
 
 1. Headless Virtual Display (Xvfb)
@@ -148,7 +150,7 @@ Input: Multi-part form data (Image + JSON Payload).
 
 Output: File stream of the generated .mp4.
 
-📂 Project Structure
+### 📂 Project Structure
 engine_api.py: Entry point for the FastAPI microservice.
 
 main.py: CLI testing script for local payload validation.
