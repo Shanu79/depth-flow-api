@@ -1,4 +1,6 @@
 import os
+os.environ["DISPLAY"] = ":99"
+
 import uuid
 import json
 from pathlib import Path

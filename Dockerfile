@@ -1,28 +1,38 @@
-# 1. Use an official, stable Python 3.10 Linux image
-FROM python:3.10-slim
+# 1. Use Python 3.11
+FROM python:3.11-slim
 
-# 2. Install critical system-level graphics drivers for OpenCV and Depthflow
+# 2. Install Graphics Drivers, CPU Software Rasterizers, and Xvfb
 RUN apt-get update && apt-get install -y \
     libgl1 \
+    libgl-dev \
+    libglx-mesa0 \
+    libgl1-mesa-dri \
     libglib2.0-0 \
+    build-essential \
+    libx11-dev \
+    libxcursor-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxi-dev \
+    git \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# 3. Set the working directory inside the container
 WORKDIR /app
-
-# 4. Copy the requirements file first (this makes rebuilding much faster)
 COPY requirements.txt .
 
-# 5. Install the Python packages
-# Note: We force the CPU-only version of PyTorch here to keep the file size smaller,
-# assuming you are deploying to a standard CPU cloud droplet first.
-RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+# 3. Install Python packages
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 
-# 6. Copy the rest of your engine code into the container
 COPY . .
 
-# 7. Expose Port 8001 so the outside world (your Main Backend) can reach it
+# 4. Force fake monitor AND force the CPU to act as a graphics card
+ENV PYTHONUNBUFFERED=1
+ENV DISPLAY=:99
+ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV GALLIUM_DRIVER=llvmpipe
+
 EXPOSE 8001
 
-# 8. The command to start the engine when the container boots up
-CMD ["uvicorn", "engine_api:app", "--host", "0.0.0.0", "--port", "8001"]
+# 5. Boot monitor, wait 2 seconds, run Uvicorn
+CMD ["/bin/bash", "-c", "Xvfb :99 -screen 0 1024x768x24 -nolisten tcp & sleep 2 && uvicorn engine_api:app --host 0.0.0.0 --port 8001"]
