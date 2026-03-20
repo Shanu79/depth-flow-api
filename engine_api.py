@@ -3,10 +3,12 @@ os.environ["DISPLAY"] = ":99"
 
 import uuid
 import json
+import io
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from PIL import Image
 
 from core.depth_model import get_depth_map
 from core.renderer import DepthflowEngine
@@ -14,8 +16,6 @@ from core.renderer import DepthflowEngine
 # ---------------------------------------------------------
 # 1. SECURITY CONFIGURATION
 # ---------------------------------------------------------
-# This is the secret key ONLY your main backend knows.
-# Set this via environment variable in production!
 ENGINE_SECRET_KEY = os.getenv("ENGINE_SECRET_KEY", "your-super-secret-internal-key")
 
 app = FastAPI(title="DepthFlow Render Engine Microservice")
@@ -28,17 +28,17 @@ TEMP_DIR.mkdir(exist_ok=True)
 # 2. PYDANTIC SCHEMAS (Strict Payload Validation)
 # ---------------------------------------------------------
 class RenderSettings(BaseModel):
-    duration: int = Field(5, gt=0)
-    fps: int = Field(30, ge=1)
-    quality: int = Field(50, ge=1, le=100)
-    ssaa: float = Field(1.0, ge=0.0, le=4.0)
+    duration: int = Field(8, gt=0)              
+    fps: int = Field(24, ge=1)                  
+    quality: int = Field(80, ge=1, le=100)      
+    ssaa: float = Field(1.0, ge=0.0, le=4.0)    
     tiling_mode: str = Field("mirror")
-    edge_fix: int = Field(5, ge=0, le=50)
+    edge_fix: int = Field(10, ge=0, le=50)      
     invert_depth: float = Field(0.0, ge=0.0, le=1.0)
 
 class MotionSettings(BaseModel):
-    style: str = Field(..., description="orbit, dolly, zoom, horizontal, vertical, circle, dolly_zoom")
-    amplitude: float = Field(0.8, ge=0.0, le=10.0)
+    style: str = Field("orbit", description="orbit, dolly, zoom, horizontal, vertical, circle, dolly_zoom") 
+    amplitude: float = Field(1.5, ge=0.0, le=10.0) 
     speed: float = Field(1.0, gt=0.0)
     reverse: bool = Field(False)
     smooth: bool = Field(True)
@@ -47,18 +47,18 @@ class MotionSettings(BaseModel):
     focus: float = Field(0.5, ge=0.0, le=1.0)
 
 class EffectsSettings(BaseModel):
-    dof_enable: bool = Field(False)
+    dof_enable: bool = Field(False)             
     dof_intensity: float = Field(1.0, ge=0.0, le=2.0)
-    dof_start: float = Field(0.6, ge=0.0, le=1.0)
+    dof_start: float = Field(0.5, ge=0.0, le=1.0)  
     dof_end: float = Field(1.0, ge=0.0, le=1.0)
-    dof_quality: int = Field(4, ge=1, le=16)
+    dof_quality: int = Field(4, ge=1, le=16)       
     dof_directions: int = Field(16, ge=1, le=32)
-    vignette_enable: bool = Field(False)
-    vignette_intensity: float = Field(0.2, ge=0.0, le=1.0)
+    vignette_enable: bool = Field(True)         
+    vignette_intensity: float = Field(0.3, ge=0.0, le=1.0) 
     vignette_decay: float = Field(20.0, ge=0.0, le=100.0)
     color_enable: bool = Field(False)
-    color_saturation: float = Field(100.0, ge=0.0, le=200.0)
-    color_contrast: float = Field(100.0, ge=0.0, le=200.0)
+    color_saturation: float = Field(105.0, ge=0.0, le=200.0) 
+    color_contrast: float = Field(105.0, ge=0.0, le=200.0)   
     color_brightness: float = Field(100.0, ge=0.0, le=200.0)
     color_gamma: float = Field(100.0, ge=0.0, le=400.0)
     color_sepia: float = Field(0.0, ge=0.0, le=100.0)
@@ -81,7 +81,7 @@ def cleanup_files(*file_paths):
 async def process_render_job(
     background_tasks: BackgroundTasks,
     image: UploadFile = File(...),
-    payload: str = Form(...), # We accept JSON as a form string
+    payload: str = Form(...), 
     x_api_key: str = Header(..., description="Internal Engine Authentication Key")
 ):
     # Security Check: Reject if the key doesn't match
@@ -100,9 +100,23 @@ async def process_render_job(
     input_img_path = str(TEMP_DIR / f"{job_id}_{image.filename}")
     output_vid_path = str(TEMP_DIR / f"{job_id}_output.mp4")
 
-    # Save uploaded image to disk
-    with open(input_img_path, "wb") as f:
-        f.write(await image.read())
+    # ---------------------------------------------------------
+    # THE 4K GUARDRAIL (SHRINKS MASSIVE IMAGES)
+    # ---------------------------------------------------------
+    try:
+        image_bytes = await image.read()
+        pil_img = Image.open(io.BytesIO(image_bytes))
+
+        # If the image is massive, shrink it to 1920px (Standard HD)
+        MAX_DIMENSION = 1920
+        if max(pil_img.width, pil_img.height) > MAX_DIMENSION:
+            pil_img.thumbnail((MAX_DIMENSION, MAX_DIMENSION), Image.Resampling.LANCZOS)
+        
+        # Save the safe, optimized image to disk (forces RGB to prevent Alpha channel crashes)
+        pil_img.convert("RGB").save(input_img_path, format="JPEG", quality=95)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Image processing failed: {str(e)}")
+    # ---------------------------------------------------------
 
     try:
         # 1. Run AI Depth Estimation
