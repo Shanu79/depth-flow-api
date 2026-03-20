@@ -34,5 +34,5 @@ ENV GALLIUM_DRIVER=llvmpipe
 
 EXPOSE 8001
 
-# 5. Boot monitor, wait 2 seconds, run Uvicorn
-CMD ["/bin/bash", "-c", "Xvfb :99 -screen 0 1024x768x24 -nolisten tcp & sleep 2 && uvicorn engine_api:app --host 0.0.0.0 --port 8001"]
+# 5. Sweep old locks, boot monitor with no access control, wait 2s, run Uvicorn
+CMD rm -rf /tmp/.X99-lock /tmp/.X11-unix/X99 && Xvfb :99 -screen 0 1024x768x24 -ac -nolisten tcp & sleep 2 && uvicorn engine_api:app --host 0.0.0.0 --port 8001
