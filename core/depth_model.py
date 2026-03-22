@@ -4,7 +4,8 @@ from PIL import Image
 from transformers import pipeline
 
 print("Loading Depth Anything V2 model...")
-depth_estimator = pipeline("depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf")
+# --- ADD device=0 TO THIS LINE ---
+depth_estimator = pipeline("depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device=0)
 
 def get_depth_map(image_path):
     print(f"Generating depth map for {image_path}...")

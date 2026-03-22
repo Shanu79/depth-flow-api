@@ -1,7 +1,0 @@
-.venv/
-__pycache__/
-temp_processing/
-*.mp4
-*.jpg
-*.png
-.env
